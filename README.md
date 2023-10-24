@@ -13,6 +13,7 @@ Implementation of the multithreading thought experiment in which 100 prisoners m
 ## High-Level Solution:
 The idea is to assign 99 prisoners to the following task (for simplicity, it is purposely missing some crucial details which will be discussed later):
 - When you enter the switch room, first ask yourself if you have ever flipped the switch before. If so, leave immediately without doing anything. If not, move on to checking the state of the switch. If the switch is currently off, flip it on and then leave. Otherwise, leave immediately without doing anything. Never ever declare that all prisoners have visited the switch room.
+
 The 1 prisoner who is not part of the above 99 will have this special task instead:
 - Keep a mental note of a counter that starts at 0. When you enter the switch room, check the state of the switch. If it is on, flip it off and increment your mental counter by 1. Otherwise, leave immediately without doing anything. You may declare that all prisoners have visited at least once when your counter reaches 99. Do NOT overcount, i.e., do not try to count beyond 99.
 
