@@ -16,7 +16,7 @@ build-debug: CXXFLAGS:=$(filter-out -O2, $(CXXFLAGS))
 build-debug: build
 
 simulation: $(HDR)/* $(SRC)/*
-	$(CXX) $(CXXFLAGS) -I $(HDR) -o simulation.exe $(SRC)/*.cpp
+	$(CXX) $(CXXFLAGS) -I $(HDR) -o simulation $(SRC)/*.cpp
 
 clean:
-	$(RM) simulation.exe
+	$(RM) simulation
