@@ -6,6 +6,8 @@ Isaac Jung
 |===========================================================================================================|
 */
 
+#include <iostream>
+#include <thread>
 #include "switch.h"
 
 
@@ -30,19 +32,36 @@ SwitchRoom::~SwitchRoom()
 }
 
 /**
+ * @brief SEMAPHORE - Ensures thread safety.
+ *
+ * @details This method must be called by any prisoner before they can try to open the door.
+ * Once they are done being in the room, they should be sure to call the lock() method to lock the door
+ * behind them. If they don't no other prisoner will be allowed to enter the room.
+ * This method is thread safe. When multiple threads try to call it at once, they will simply get stuck at
+ * the door, and the OS will decide who gets in.
+ *
+ * @param prisoner Prisoner trying to unlock the room.
+ */
+void SwitchRoom::unlock(Prisoner* prisoner)
+{
+    this->key.lock();
+    this->current_occupant = prisoner;
+}
+
+/**
  * @brief OPENER - Interface for entering the room.
  *
- * @details This method is thread safe. All the prisoners may call it at any time, and only one will get in
- * at a time. However, a prisoner needs to be sure to use the exit() method when done, or everyone will get
- * stuck. While the prisoner is in the room, they may inspect the switch with check_switch() and they may
+ * @details This method must be called after unlocking the room with unlock(), but before trying to do
+ * anything with the switch. Once inside, a prisoner may inspect the switch with check_switch() and they may
  * flip the switch with flip_switch(). These methods will not work for a prisoner who is not in the room.
  *
  * @param prisoner Prisoner trying to enter the room.
  */
 void SwitchRoom::enter(Prisoner* prisoner)
 {
-    this->lock.lock();
-    this->current_occupant = prisoner;
+    if (prisoner != this->current_occupant) return;
+    prisoner->set_in_switch_room(true);
+    std::cout << std::endl << prisoner->to_string() << " has entered the room." << std::endl;
 }
 
 /**
@@ -56,8 +75,8 @@ void SwitchRoom::enter(Prisoner* prisoner)
  */
 switch_state SwitchRoom::check_switch(Prisoner* prisoner)
 {
-    if (prisoner != this->current_occupant) return unknown;
-    return this->s->is_on() ? on : off;
+    if (prisoner != this->current_occupant || !prisoner->is_in_switch_room()) return unknown;
+    return this->s->is_on() ? switch_state::on : switch_state::off;
 }
 
 /**
@@ -70,23 +89,44 @@ switch_state SwitchRoom::check_switch(Prisoner* prisoner)
  */
 void SwitchRoom::flip_switch(Prisoner* prisoner)
 {
-    if (prisoner != this->current_occupant) return;
+    if (prisoner != this->current_occupant || !prisoner->is_in_switch_room()) return;
     this->s->flip();
+    std::cout << "  --> They flip the switch to the " <<
+        (this->s->is_on() ? "on" : "off") << " state." << std::endl;
 }
 
 /**
  * @brief CLOSER - Interface for exiting the room.
  *
  * @details This method will do nothing if the prisoner is not currently in the room. This method needs to be
- * called once a prisoner is done being in the switch room, or no one else will be able to enter.
+ * called once a prisoner is done being in the switch room, or no one else will be able to enter. After this
+ * method is executed successfully, the caller should then use lock() to lock the door behind them.
  *
  * @param prisoner Prisoner trying to exit the room.
+ * @param description Info to print out regarding their visit.
  */
-void SwitchRoom::exit(Prisoner* prisoner)
+void SwitchRoom::exit(Prisoner* prisoner, std::string description)
+{
+    if (prisoner != this->current_occupant || !prisoner->is_in_switch_room()) return;
+    if (!description.empty()) std::cout << "  --> They " << description << "." << std::endl;
+    prisoner->set_in_switch_room(false);
+}
+
+/**
+ * @brief SEMAPHORE - Ensures thread safety.
+ *
+ * @details This method must be called by any prisoner after they have successfully closed the door.
+ * This method serves as the final step in the process of accessing the switch room. If it is neglected, no
+ * other prisoner will be able to enter the room, simply because they will get stuck trying to unlock the
+ * room despite it still being unlocked.
+ *
+ * @param prisoner Prisoner trying to lock the room.
+ */
+void SwitchRoom::lock(Prisoner* prisoner)
 {
     if (prisoner != this->current_occupant) return;
     this->current_occupant = nullptr;
-    this->lock.unlock();
+    this->key.unlock();
 }
 
 
@@ -109,7 +149,7 @@ Switch::Switch(switch_state initial_state)
  */
 bool Switch::is_on()
 {
-    return this->state == on;
+    return this->state == switch_state::on;
 }
 
 /**
@@ -117,5 +157,5 @@ bool Switch::is_on()
  */
 void Switch::flip()
 {
-    this->state = (this->state == off) ? on : off;
+    this->state = (this->state == switch_state::off) ? switch_state::on : switch_state::off;
 }

@@ -8,8 +8,10 @@ Isaac Jung
 
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 #include <unistd.h>
 #include "prisoner.h"
+#include "prison.h"
 
 
 /*============================================== Prisoner =================================================*/
@@ -19,7 +21,33 @@ Isaac Jung
  * 
  * @param index unique number assigned to the prisoner for easier identification purposes.
  */
-Prisoner::Prisoner(uint32_t index) : unique_index(index) {}
+Prisoner::Prisoner(uint32_t index) : unique_index(index), str_rep(to_string_internal(index)) {}
+
+/**
+ * @brief INTERNAL SETTER - Interface for setting the string representation of the prisoner.
+ *
+ * @details This is a private method which should be called only in the member initializer list of the class
+ * constructor, to set the const value of str_rep.
+ *
+ * @param index unique number assigned to the prisoner for easier identification purposes.
+ * @return Returns a string of the form "Prisoner #x", where x is their index buffered with 0s.
+ */
+std::string Prisoner::to_string_internal(uint32_t index) const
+{
+    std::stringstream ret;
+    ret << "Prisoner #" << std::setfill('0') << std::setw(Prison::prisoner_id_len()) << index;
+    return ret.str();
+}
+
+/**
+ * @brief GETTER - Interface for getting the string representation of the prisoner.
+ * 
+ * @return Returns the str_rep built by to_string_internal() during object construction.
+ */
+std::string Prisoner::to_string() const
+{
+    return this->str_rep;
+}
 
 /**
  * @brief GETTER - Interface for getting whether or not the prisoner is currently in the switch room.
@@ -29,6 +57,16 @@ Prisoner::Prisoner(uint32_t index) : unique_index(index) {}
 bool Prisoner::is_in_switch_room()
 {
     return this->in_switch_room;
+}
+
+/**
+ * @brief SETTER - Interface for setting whether or not the prisoner is currently in the switch room.
+ * 
+ * @param in_room Use true when setting the prisoner to be in the switch room, false otherwise.
+ */
+void Prisoner::set_in_switch_room(bool in_room)
+{
+    this->in_switch_room = in_room;
 }
 
 /**
@@ -49,8 +87,7 @@ bool Prisoner::has_been_in_switch_room()
  */
 void Prisoner::declare_completion(bool* challenge_finished)
 {
-    std::cout << std::endl << "Prisoner #" << std::setfill('0') << std::setw(3) << this->unique_index
-        << " declares that the challenge is complete!" << std::endl;
+    std::cout << std::endl << this->str_rep << " declares that the challenge is complete!" << std::endl;
     *challenge_finished = true;
 }
 
@@ -70,6 +107,20 @@ Setter::Setter(uint32_t index) : Prisoner(index) {}
 Setter::~Setter() {}
 
 /**
+ * @brief INTERNAL SETTER - Interface for setting the string representation of the setter.
+ * 
+ * @details This is a private method which should be called only in the member initializer list of the class
+ * constructor, to set the const value of str_rep.
+ *
+ * @param index unique number assigned to the prisoner for easier identification purposes.
+ * @return Returns a string of the form "Prisoner #x (Setter)", where x is their index buffered with 0s.
+ */
+std::string Setter::to_string_internal(uint32_t index) const
+{
+    return Prisoner::to_string_internal(index) + " (Setter)";
+}
+
+/**
  * @brief SUB METHOD - A thread should be started on this method.
  * 
  * The prison will have every prisoner attempt to carry out their tasks concurrently.
@@ -80,56 +131,48 @@ Setter::~Setter() {}
  * @param challenge_finished Starts false, and gets set to true when a prisoner thinks they have won.
  *  True breaks the loop, which would otherwise be infinite.
  * @param switch_room SwitchRoom object with which each prisoner interacts.
+ * @param threaded Whether the method is being executed as a child process or part of the main thread.
  */
-void Setter::perform_task(bool* challenge_finished, SwitchRoom *switch_room)
+void Setter::perform_task(bool* challenge_finished, SwitchRoom *switch_room, bool threaded)
 {
     while (!*challenge_finished) {
-        sleep(WAIT_TIME);
+        sleep(WAIT_TIME);   // helps keep same thread from getting access repeatedly
 
-        // try to enter the switch room
-        switch_room->enter(this);
+        // try to unlock the switch room
+        switch_room->unlock(this);
         if (*challenge_finished) {  // it's possible this changed while this prisoner was waiting to enter
-            switch_room->exit(this);
-            this->in_switch_room = false;
+            switch_room->lock(this);
             continue;
         }
-        this->in_switch_room = true;
+        switch_room->enter(this);
         this->entered_count++;
-        std::cout << std::endl << "Prisoner #" << std::setfill('0') << std::setw(3) << this->unique_index
-            << " has entered the room." << std::endl;
 
         // if this prisoner has already flipped the switch up twice, they should just leave immediately
-        if (switch_flip_count >= SETTER_MAX_COUNT) {
-            std::cout << "  --> They leave without doing anything (because they are done)." << std::endl;
-            switch_room->exit(this);
-            this->in_switch_room = false;
-            continue;
+        if (this->flip_count >= this->target_count) {
+            switch_room->exit(this, "leave without doing anything (because they are done)");
         }
 
         // check the state of the switch; if it's currently on, leave immediately
         switch_state current_state = switch_room->check_switch(this);
-        if (current_state == on) {
-            std::cout << "  --> They leave without doing anything (because the switch is on)." << std::endl;
-            switch_room->exit(this);
-            this->in_switch_room = false;
-            continue;
+        if (current_state == switch_state::on) {
+            switch_room->exit(this, "leave without doing anything (because the switch is on)");
         }
 
         // if the switch is currently off, turn it on
-        if (current_state == off) {
-            std::cout << "  --> They flip the switch to the on state." << std::endl;
+        else if (current_state == switch_state::off) {
             switch_room->flip_switch(this);
-            this->switch_flip_count++;
+            this->flip_count++;
+            switch_room->exit(this);
         }
 
         // intentionally logically incorrect, for testing that the prison can verify incorrectness
-        if (this->entered_count > 5) {
+        if (this->entered_count > 5 && this->flip_count >= this->target_count)
             this->declare_completion(challenge_finished);
-        }//*/
+        //*/
 
-        // leave the switch room so that the next prisoner may enter
-        switch_room->exit(this);
-        this->in_switch_room = false;
+        // lock the switch room so that the next prisoner may unlock it
+        switch_room->lock(this);
+        if (!threaded) break;
     }
 }
 
@@ -140,12 +183,40 @@ void Setter::perform_task(bool* challenge_finished, SwitchRoom *switch_room)
  * 
  * @param index unique number assigned to the prisoner for easier identification purposes.
  */
-Resetter::Resetter(uint32_t index) : Prisoner(index) {}
+Resetter::Resetter(uint32_t index) : Prisoner(index), target_count(calculate_target_count()) {}
 
 /**
  * @brief DECONSTRUCTOR - Frees memory.
  */
 Resetter::~Resetter() {}
+
+/**
+ * @brief INTERNAL SETTER - Interface for setting the string representation of the resetter.
+ * 
+ * @details This is a private method which should be called only in the member initializer list of the class
+ * constructor, to set the const value of str_rep.
+ *
+ * @param index unique number assigned to the prisoner for easier identification purposes.
+ * @return Returns a string of the form "Prisoner #x (Resetter)", where x is their index buffered with 0s.
+ */
+std::string Resetter::to_string_internal(uint32_t index) const
+{
+    return Prisoner::to_string_internal(index) + " (Resetter)";
+}
+
+/**
+ * @brief INTERNAL SETTER - Interface for setting the target reset count for the resetter.
+ * 
+ * @details This is a private method which should be called only in the member initializer list of the class
+ * constructor, to set the const value of target_count.
+ *
+ * @param index unique number assigned to the prisoner for easier identification purposes.
+ * @return Returns a string of the form "Prisoner #x (Resetter)", where x is their index buffered with 0s.
+ */
+uint64_t Resetter::calculate_target_count() const
+{
+    return (Prison::num_prisoners() - 1) * SETTER_MAX_COUNT;
+}
 
 /**
  * @brief SUB METHOD - A thread should be started on this method.
@@ -158,56 +229,42 @@ Resetter::~Resetter() {}
  * @param challenge_finished Starts false, and gets set to true when a prisoner thinks they have won.
  *  True breaks the loop, which would otherwise be infinite.
  * @param switch_room SwitchRoom object with which each prisoner interacts.
+ * @param threaded Whether the method is being executed as a child process or part of the main thread.
  */
-void Resetter::perform_task(bool *challenge_finished, SwitchRoom *switch_room)
+void Resetter::perform_task(bool *challenge_finished, SwitchRoom *switch_room, bool threaded)
 {
     while (!*challenge_finished) {
-        sleep(WAIT_TIME);
+        sleep(WAIT_TIME);   // helps keep same thread from getting access repeatedly
 
-        // try to enter the switch room
-        switch_room->enter(this);
+        // try to unlock the switch room
+        switch_room->unlock(this);
         if (*challenge_finished) {  // it's possible this changed while this prisoner was waiting to enter
-            switch_room->exit(this);
-            this->in_switch_room = false;
+            switch_room->lock(this);
             continue;
         }
-        this->in_switch_room = true;
+        switch_room->enter(this);
         this->entered_count++;
-        std::cout << std::endl << "Prisoner #" << std::setfill('0') << std::setw(3) << this->unique_index
-            << " has entered the room." << std::endl;
-
-        // if this prisoner has already flipped the switch down 198 times, they should just leave immediately
-        if (switch_flip_count >= RESETTER_MAX_COUNT - (this->switch_starting_position == off ? 1 : 0)) {
-            std::cout << "  --> They leave without doing anything (because they are done)." << std::endl;
-            this->declare_completion(challenge_finished);
-            switch_room->exit(this);
-            this->in_switch_room = false;
-            continue;
-        }
 
         // check the state of the switch; if it's currently off, leave immediately
         switch_state current_state = switch_room->check_switch(this);
-        if (current_state == off) {
-            std::cout << "  --> They leave without doing anything (because the switch is off)." << std::endl;
-            if (this->entered_count == 1) this->switch_starting_position == off;    // logically must be true
-            switch_room->exit(this);
-            this->in_switch_room = false;
-            continue;
+        if (current_state == switch_state::off) {
+            if (this->entered_count == 1) this->switch_start_state == switch_state::off;
+            switch_room->exit(this, "leave without doing anything (because the switch is off)");
         }
 
         // if the switch is currently on, turn it off
-        if (current_state == on) {
-            std::cout << "  --> They flip the switch to the off state." << std::endl;
+        else if (current_state == switch_state::on) {
             switch_room->flip_switch(this);
-            this->switch_flip_count++;
+            this->flip_count++;
+            switch_room->exit(this);
         }
 
         // can declare challenge complete if they just counted the final setter
-        if (switch_flip_count >= RESETTER_MAX_COUNT - (this->switch_starting_position == off ? 1 : 0))
+        if (this->flip_count >= this->target_count - (this->switch_start_state == switch_state::off ? 1 : 0))
             this->declare_completion(challenge_finished);
 
-        // leave the switch room so that the next prisoner may enter
-        switch_room->exit(this);
-        this->in_switch_room = false;
+        // lock the switch room so that the next prisoner may unlock it
+        switch_room->lock(this);
+        if (!threaded) break;
     }
 }

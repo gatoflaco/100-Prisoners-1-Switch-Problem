@@ -1,5 +1,6 @@
 # 100-Prisoners-1-Switch-Problem
 Implementation of the multithreading thought experiment in which 100 prisoners must communicate with nothing more than a single switch to escape their prison.
+This is a variant on the popular 100 prisoners problem, but instead of being about optimizing the probability of success, there is a solution that guarantees the prisoners' success. Instead of a combinatorics problem, it is more of a threading anaolgy, along with a logic puzzle.
 
 ## Problem Description:
 100 prisoners are told by their warden that they will receive a challenge. If they succeed, they all go free, but if they fail, they will never be allowed to leave. What is this, Saw? I guess we'll assume the prisoners are good people and we want to help them escape. Here is the challenge:
