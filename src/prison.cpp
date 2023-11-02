@@ -10,16 +10,23 @@ Isaac Jung
 #include <unistd.h>
 #include <algorithm>
 #include <thread>
+#include <stdexcept>
 #include "prison.h"
 
 
 /**
- * @brief INITIALIZER - Initializes the prisoners.
+ * @brief INITIALIZER - Initializes the prison.
  *
  * @param number_of_prisoners Number of prisoners to populate the prison.
+ * @param initial_state Initial state of the prison's switch room's switch, on or off.
+ * @throws std::logic_error When number of prisoners < 1. There needs to be at least 1 resetter.
  */
-void Prison::init_prisoners(uint32_t number_of_prisoners)
+void Prison::init(uint32_t number_of_prisoners, switch_state initial_state)
 {
+    Prison::init_called = true;
+    
+    if (number_of_prisoners < 1) throw std::logic_error("Need at least 2 prisoners");
+
     Prison::total_number_of_prisoners = number_of_prisoners;
     Prison::prisoner_unique_index_len = Prison::calculate_prisoner_unique_index_len(number_of_prisoners);
 
@@ -28,23 +35,17 @@ void Prison::init_prisoners(uint32_t number_of_prisoners)
         Prison::prisoners.push_back(new Setter(index));
     }
     Prison::prisoners.push_back(new Resetter(number_of_prisoners));
-}
-
-/**
- * @brief INITIALIZER - Initializes the switch room.
- *
- * @param initial_state Initial state of the prison's switch room's switch, on or off.
- */
-void Prison::init_switch_room(switch_state initial_state)
-{
     Prison::switch_room = new SwitchRoom(initial_state);
 }
 
 /**
  * @brief DELETER - Frees memory.
+ * @throws std::logic_error When init() hasn't been called first.
  */
 void Prison::free_memory()
 {
+    if (!Prison::init_called) throw std::logic_error("Prison::init() must be called first");
+
     for (Prisoner* prisoner : Prison::prisoners) {
         delete prisoner;
     }
@@ -70,9 +71,12 @@ uint8_t Prison::calculate_prisoner_unique_index_len(uint32_t number_of_prisoners
  * @brief GETTER - Interface for getting the total number of prisoners in the prison.
  *
  * @return Returns the total number of prisoners, which should not change after prison is initialized.
+ * @throws std::logic_error When init() hasn't been called first.
  */
 uint32_t Prison::num_prisoners()
 {
+    if (!Prison::init_called) throw std::logic_error("Prison::init() must be called first");
+
     return Prison::total_number_of_prisoners;
 }
 
@@ -80,9 +84,12 @@ uint32_t Prison::num_prisoners()
  * @brief GETTER - Interface for getting the number of digits in a prisoner's unique index number.
  *
  * @return Returns the prisoner unique index length, which should not change after prison is initialized.
+ * @throws std::logic_error When init() hasn't been called first.
  */
 uint8_t Prison::prisoner_id_len()
 {
+    if (!Prison::init_called) throw std::logic_error("Prison::init() must be called first");
+
     return Prison::prisoner_unique_index_len;
 }
 
@@ -99,13 +106,11 @@ uint8_t Prison::prisoner_id_len()
  * @param g Random engine, for example a std::mt19937 (Mersenne Twister engine).
  * @param threaded Whether the method should spawn prisoner threads or execute prisoner tasks one at a time.
  * @return Returns true when the prisoners succeed at the challenge, false if they fail.
+ * @throws std::logic_error When init() hasn't been called first.
  */
 bool Prison::challenge(std::mt19937 g, bool threaded)
 {
-    if (
-        !dynamic_cast<SwitchRoom*>(Prison::switch_room) ||
-        Prison::prisoners.size() <= 2
-    ) return false;    // can't challenge when switch_room is not instantiated or not enough prisoners
+    if (!Prison::init_called) throw std::logic_error("Prison::init() must be called first");
 
     bool challenge_finished = false;
 

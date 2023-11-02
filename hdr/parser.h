@@ -13,9 +13,6 @@ Isaac Jung
 #ifndef PARSER
 #define PARSER
 
-#include <string>
-
-
 /**
  * @brief Whether debug mode is set
  * 
@@ -26,7 +23,6 @@ typedef enum {
     d_off   = 0,
     d_on    = 1
 } debug_mode;
-
 
 /**
  * @brief Whether verbose mode is set.
@@ -39,52 +35,53 @@ typedef enum {
     v_on    = 1
 } verb_mode;
 
-
 /**
- * @brief What will take on the role of the warden.
+ * @brief How much output should be printed.
  * 
- * @param os The operating system will decide; this is the default option which uses threads for prisoners.
- * @param rand The prisoners' order is decided by a random seed, but the program will be single threaded.
- * @param fixed A random permutation is decided in the beginning; the prisoners will follow that order.
- * @param sequential Like fixed, but the order is specifically from 1 to 100.
- * @param fast Like sequential, but the resetter will enter any time the switch is in the on position.
+ * @param normal Print out info about each prisoner who enters and what they do in the room.
+ * @param halfway Only mention prisoners entering, not what they do.
+ * @param silent Print out only the final conclusion.
  */
 typedef enum {
-    os          = 0,
-    rand        = 1,
-    fixed       = 2,
-    sequential  = 3,
-    fast        = 4
-} warden;
+    normal  = 0,
+    halfway = 1,
+    silent  = 2
+} out_mode;
 
-
-/**
- * @brief Version of strategy to use.
- * 
- * @param proper Only the resetter will declare completion, only when certain of guaranteed success.
- * @param improper The setters may declare completion too early, but may still succeed by luck.
- */
-typedef enum {
-    proper      = 0,
-    improper    = 1,
-} strategy;
+#include <string>
+#include "prison.h"
+#include "switch.h"
 
 
 // parses command line input
 class Parser
 {
     private:
-        debug_mode d = d_off;           // debug mode, d_off by default
-        verb_mode v = v_off;            // verbose mode, v_off by default
-        warden w = os;                  // warden, os by default
-        strategy s = proper;            // strategy, proper by default
-        uint32_t num_p = 100;           // number of prisoners to use in the challenge, 100 by default
-        std::string i_s = "unknown";    // initial state of the switch, "unknown" by default
-        std::string seed = "";          // user-given seed, empty string by default
+        static inline bool parse_called = false;            // prevents calling other methods before parse()
+        static inline debug_mode d = debug_mode::d_off;         // debug mode, d_off by default
+        static inline verb_mode v = verb_mode::v_off;           // verbose mode, v_off by default
+        static inline out_mode o = out_mode::normal;            // output mode, normal by default
+        static inline uint32_t num_p = 100;                     // number of prisoners, 100 by default
+        static inline switch_state i_s = switch_state::unknown; // initial switch state, unknown by default
+        static inline warden w = warden::os;                    // warden type, os by default
+        static inline strategy strat = strategy::proper;        // strategy to use, "proper" by default
+        static inline std::string seed = "";                    // user-given seed, empty string by default
+
+        static void handle_option(const std::string& arg);
+        static void handle_flags(const std::string& arg);
+        static void handle_argument(const std::string& arg);
 
     public:
-        Parser(int32_t argc, char *argv[]); // constructor to read arguments and flags
-        ~Parser();                          // deconstructor
+        static void parse(int32_t argc, char *argv[]);
+
+        static bool debug_is_on();
+        static bool verbose_is_on();
+        static out_mode get_output_mode();
+        static uint32_t get_number_of_prisoners();
+        static switch_state get_initial_switch_state();
+        static warden get_warden();
+        static strategy get_strategy();
+        static std::string get_seed();
 };
 
 #endif // PARSER

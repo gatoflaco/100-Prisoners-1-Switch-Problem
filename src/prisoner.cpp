@@ -40,16 +40,6 @@ std::string Prisoner::to_string_internal(uint32_t index) const
 }
 
 /**
- * @brief GETTER - Interface for getting the string representation of the prisoner.
- * 
- * @return Returns the str_rep built by to_string_internal() during object construction.
- */
-std::string Prisoner::to_string() const
-{
-    return this->str_rep;
-}
-
-/**
  * @brief GETTER - Interface for getting whether or not the prisoner is currently in the switch room.
  * 
  * @return Returns true when the prisoner is actively in the switch room, false otherwise.
@@ -99,7 +89,7 @@ void Prisoner::declare_completion(bool* challenge_finished)
  * 
  * @param index unique number assigned to the prisoner for easier identification purposes.
  */
-Setter::Setter(uint32_t index) : Prisoner(index) {}
+Setter::Setter(uint32_t index) : Prisoner(index), str_rep(to_string_internal(index)) {}
 
 /**
  * @brief DECONSTRUCTOR - Frees memory.
@@ -118,6 +108,16 @@ Setter::~Setter() {}
 std::string Setter::to_string_internal(uint32_t index) const
 {
     return Prisoner::to_string_internal(index) + " (Setter)";
+}
+
+/**
+ * @brief GETTER - Interface for getting the string representation of the setter.
+ * 
+ * @return Returns the str_rep built by to_string_internal() during object construction.
+ */
+std::string Setter::to_string() const
+{
+    return this->str_rep;
 }
 
 /**
@@ -165,8 +165,8 @@ void Setter::perform_task(bool* challenge_finished, SwitchRoom *switch_room, boo
             switch_room->exit(this);
         }
 
-        // intentionally logically incorrect, for testing that the prison can verify incorrectness
-        if (this->entered_count > 5 && this->flip_count >= this->target_count)
+        /* intentionally logically incorrect, for testing that the prison can verify incorrectness
+        if (this->entered_count > 2 && this->flip_count >= this->target_count)
             this->declare_completion(challenge_finished);
         //*/
 
@@ -183,7 +183,8 @@ void Setter::perform_task(bool* challenge_finished, SwitchRoom *switch_room, boo
  * 
  * @param index unique number assigned to the prisoner for easier identification purposes.
  */
-Resetter::Resetter(uint32_t index) : Prisoner(index), target_count(calculate_target_count()) {}
+Resetter::Resetter(uint32_t index) : Prisoner(index), target_count(calculate_target_count()),
+    str_rep(to_string_internal(index)) {}
 
 /**
  * @brief DECONSTRUCTOR - Frees memory.
@@ -202,6 +203,16 @@ Resetter::~Resetter() {}
 std::string Resetter::to_string_internal(uint32_t index) const
 {
     return Prisoner::to_string_internal(index) + " (Resetter)";
+}
+
+/**
+ * @brief GETTER - Interface for getting the string representation of the resetter.
+ * 
+ * @return Returns the str_rep built by to_string_internal() during object construction.
+ */
+std::string Resetter::to_string() const
+{
+    return this->str_rep;
 }
 
 /**

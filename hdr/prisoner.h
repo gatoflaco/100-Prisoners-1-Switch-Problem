@@ -39,7 +39,7 @@ class Prisoner
         Prisoner(uint32_t index);
         virtual ~Prisoner() {};
         
-        std::string to_string() const;
+        virtual std::string to_string() const = 0;
         bool is_in_switch_room();
         void set_in_switch_room(bool in_room);
         bool has_been_in_switch_room();
@@ -57,12 +57,15 @@ class Setter : public Prisoner
 {
     private:
         static const uint8_t target_count = SETTER_MAX_COUNT;   // number of times setter wants to set
+        const std::string str_rep;                              // memoized to_string_internal
 
         std::string to_string_internal(uint32_t index) const;
 
     public:
         Setter(uint32_t index);
         ~Setter();
+
+        std::string to_string() const;
 
         void perform_task(bool* challenge_finished, SwitchRoom* switch_room, bool threaded = true);
 };
@@ -72,8 +75,9 @@ class Setter : public Prisoner
 class Resetter : public Prisoner
 {
     private:
-        switch_state switch_start_state = unknown;    // can be updated to off in a specific case
-        const uint64_t target_count;                        // number of times resetter wants to reset
+        switch_state switch_start_state = unknown;  // can be updated to off in a specific case
+        const uint64_t target_count;                // number of times resetter wants to reset
+        const std::string str_rep;                  // memoized to_string_internal
 
         std::string to_string_internal(uint32_t index) const;
         uint64_t calculate_target_count() const;
@@ -81,6 +85,8 @@ class Resetter : public Prisoner
     public:
         Resetter(uint32_t index);
         ~Resetter();
+
+        std::string to_string() const;
 
         void perform_task(bool* challenge_finished, SwitchRoom* switch_room, bool threaded = true);
 };

@@ -18,6 +18,34 @@ Isaac Jung
 
 class Prison;
 
+/**
+ * @brief What will take on the role of the warden.
+ * 
+ * @param os The operating system will decide; this is the default option which uses threads for prisoners.
+ * @param pseudo The prisoners' order is decided by a random seed, but the program will be single threaded.
+ * @param fixed A random permutation is decided in the beginning; the prisoners will follow that order.
+ * @param seq Like fixed, but the order is specifically from 1 to 100.
+ * @param fast Like sequential, but the resetter will enter any time the switch is in the on position.
+ */
+typedef enum {
+    os      = 0,
+    pseudo  = 1,
+    fixed   = 2,
+    seq     = 3,
+    fast    = 4
+} warden;
+
+/**
+ * @brief Version of strategy to use.
+ * 
+ * @param proper Only the resetter will declare completion, only when certain of guaranteed success.
+ * @param improper The setters may declare completion too early, but may still succeed by luck.
+ */
+typedef enum {
+    proper      = 0,
+    improper    = 1,
+} strategy;
+
 #include <stdint.h>
 #include <vector>
 #include <random>
@@ -29,16 +57,16 @@ class Prison;
 class Prison
 {
     private:
-        inline static uint32_t total_number_of_prisoners;  // number of prisoners in the prison
-        inline static uint8_t prisoner_unique_index_len;   // char buffer size needed for prisoner ids
-        inline static std::vector<Prisoner*> prisoners;    // actual prisoners in the prison
-        inline static SwitchRoom* switch_room;             // room containing the switch
+        static inline bool init_called = false;             // prevents calling other methods before init()
+        static inline uint32_t total_number_of_prisoners;   // number of prisoners in the prison
+        static inline uint8_t prisoner_unique_index_len;    // char buffer size needed for prisoner ids
+        static inline std::vector<Prisoner*> prisoners;     // actual prisoners in the prison
+        static inline SwitchRoom* switch_room = nullptr;    // room containing the switch
 
         static uint8_t calculate_prisoner_unique_index_len(uint32_t number_of_prisoners);
     
     public:
-        static void init_prisoners(uint32_t number_of_prisoners);
-        static void init_switch_room(switch_state initial_state);
+        static void init(uint32_t number_of_prisoners, switch_state initial_state);
         static void free_memory();
 
         static uint32_t num_prisoners();
