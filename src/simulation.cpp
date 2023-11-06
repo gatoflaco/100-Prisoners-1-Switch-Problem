@@ -6,20 +6,13 @@ Isaac Jung
 |===========================================================================================================|
 */
 
+#include <cstring>
 #include <iostream>
-#include <string.h>
-#include <sstream>
-#include <stdint.h>
-#include <random>
-#include <unistd.h>
 #include "parser.h"
 #include "prison.h"
-#include "switch.h"
-
 
 static int32_t print_usage();
-static void debug_print(int32_t pid, uint32_t seed);
-
+static void debug_print();
 
 /**
  * @brief MAIN METHOD - Called when program is executed.
@@ -30,37 +23,21 @@ static void debug_print(int32_t pid, uint32_t seed);
  */
 int32_t main(int32_t argc, char *argv[])
 {
-    if (argc > 1 && strcmp(argv[1], "--help") == 0) return print_usage();
-    int32_t pid = getpid();
+    if (argc > 1 && std::strcmp(argv[1], "--help") == 0) return print_usage();
     Parser::parse(argc, argv);
+    int32_t pid = Parser::get_pid();
     bool debug_enabled = Parser::debug_is_on();
-
-    uint32_t seed;
-    if (Parser::get_seed().empty()) {   // need to generate a random seed
-        std::random_device rd;
-        std::mt19937 temp(rd());
-        std::uniform_int_distribution<uint32_t> seed_distribution(0, UINT32_MAX);
-        seed = seed_distribution(temp);
-    } else seed = std::stoul(Parser::get_seed());
-
-    if (debug_enabled) debug_print(pid, seed);
-    std::mt19937 g(seed);   // used for randomness
-
-    switch_state initial_state = Parser::get_initial_switch_state();
-    if (initial_state == switch_state::unknown) {
-        std::uniform_int_distribution<uint8_t> distribution(0, 1);
-        initial_state = distribution(g) == 0 ? switch_state::off : switch_state::on;
-    }
+    if (debug_enabled) debug_print();
     
-    Prison::init(Parser::get_number_of_prisoners(), initial_state);
-    
-    bool success = Prison::challenge(g, false);
+    Prison::init();
+    bool success = Prison::challenge();
     Prison::free_memory();
 
-    if (success) std::cout << "The prisoners all go free!" << std::endl;
-    else std::cout << "The prisoners are doomed to die!" << std::endl;
+    if (success) std::cout << std::endl << "The prisoners all go free!" << std::endl;
+    else std::cout << std::endl << "The prisoners are doomed!" << std::endl;
 
-    if (debug_enabled) std::cout << std::endl << "==" << pid << "== The seed was: " << seed << std::endl;
+    if (debug_enabled && !Parser::seed_is_from_user())
+        std::cout << std::endl << "==" << pid << "== The seed was: " << Parser::get_seed() << std::endl;
     return 0;
 }
 
@@ -115,16 +92,15 @@ static int32_t print_usage()
 
 /**
  * @brief HELPER - Prints out flag and option states when debug mode is enabled.
- * 
- * @param pid Process ID of this program. All output associated with the debug flag starts with this.
- * @param seed Seed being used. Could be randomly generated or given on the command line.
  */
-static void debug_print(int32_t pid, uint32_t seed) {
+static void debug_print() {
+    int32_t pid = Parser::get_pid();
     bool verbose_enabled = Parser::verbose_is_on();
     out_mode o = Parser::get_output_mode();
     switch_state i_s = Parser::get_initial_switch_state();
     warden w = Parser::get_warden();
     strategy strat = Parser::get_strategy();
+    uint32_t seed = Parser::get_seed();
 
     std::cout << "==" << pid << "== Debug mode is enabled. " <<
         "Look for lines preceeded by the PID." << std::endl;
@@ -141,19 +117,19 @@ static void debug_print(int32_t pid, uint32_t seed) {
     if (i_s == switch_state::unknown) std::cout << "==" << pid << "== Switch state: unknown" << std::endl;
     else if (i_s == switch_state::on) std::cout << "==" << pid << "== Switch state: on" << std::endl;
     else if (i_s == switch_state::off) std::cout << "==" << pid << "== Switch state: off" << std::endl;
-    else std::cout << "==" << pid << "== WARNING: SWITCH STATE APPEARS INVALID" << std::endl;
+    else std::cout << "==" << pid << "== WARNING: SWITCH STATE APPEARS INVALID." << std::endl;
 
     if (w == warden::os) std::cout << "==" << pid << "== Warden: os" << std::endl;
     else if (w == warden::pseudo) std::cout << "==" << pid << "== Warden: pseudorandom" << std::endl;
     else if (w == warden::fixed) std::cout << "==" << pid << "== Warden: fixed" << std::endl;
     else if (w == warden::seq) std::cout << "==" << pid << "== Warden: sequential" << std::endl;
     else if (w == warden::fast) std::cout << "==" << pid << "== Warden: fast" << std::endl;
-    else std::cout << "==" << pid << "== WARNING: WARDEN APPEARS INVALID" << std::endl;
+    else std::cout << "==" << pid << "== WARNING: WARDEN APPEARS INVALID." << std::endl;
 
     if (strat == strategy::proper) std::cout << "==" << pid << "== Strategy: proper" << std::endl;
     else if (strat == strategy::improper) std::cout << "==" << pid << "== Strategy: improper" << std::endl;
-    else std::cout << "==" << pid << "== WARDNING: STRATEGY APPEARS INVALID" << std::endl;
+    else std::cout << "==" << pid << "== WARDNING: STRATEGY APPEARS INVALID." << std::endl;
 
-    if (Parser::get_seed().empty()) std::cout << "==" << pid << "== Generated seed: " << seed << std::endl;
+    if (!Parser::seed_is_from_user()) std::cout << "==" << pid << "== Generated seed: " << seed << std::endl;
     else std::cout << "==" << pid << "== User-given seed: " << seed << std::endl;
 }

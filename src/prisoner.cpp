@@ -6,10 +6,12 @@ Isaac Jung
 |===========================================================================================================|
 */
 
-#include <iostream>
 #include <iomanip>
+#include <iostream>
 #include <sstream>
+#include <thread>
 #include <unistd.h>
+#include "parser.h"
 #include "prisoner.h"
 #include "prison.h"
 
@@ -77,7 +79,8 @@ bool Prisoner::has_been_in_switch_room()
  */
 void Prisoner::declare_completion(bool* challenge_finished)
 {
-    std::cout << std::endl << this->str_rep << " declares that the challenge is complete!" << std::endl;
+    if (Parser::get_output_mode() != out_mode::silent)
+        std::cout << std::endl << this->str_rep << " declares that the challenge is complete!" << std::endl;
     *challenge_finished = true;
 }
 
@@ -131,21 +134,21 @@ std::string Setter::to_string() const
  * @param challenge_finished Starts false, and gets set to true when a prisoner thinks they have won.
  *  True breaks the loop, which would otherwise be infinite.
  * @param switch_room SwitchRoom object with which each prisoner interacts.
- * @param threaded Whether the method is being executed as a child process or part of the main thread.
  */
-void Setter::perform_task(bool* challenge_finished, SwitchRoom *switch_room, bool threaded)
+void Setter::perform_task(bool* challenge_finished, SwitchRoom *switch_room)
 {
+    std::thread::id tid = std::this_thread::get_id();
     while (!*challenge_finished) {
-        sleep(WAIT_TIME);   // helps keep same thread from getting access repeatedly
-
         // try to unlock the switch room
         switch_room->unlock(this);
         if (*challenge_finished) {  // it's possible this changed while this prisoner was waiting to enter
             switch_room->lock(this);
             continue;
         }
-        switch_room->enter(this);
         this->entered_count++;
+        switch_room->enter(this);
+        if (Parser::verbose_is_on()) std::cout << "  --> They have now entered " << this->entered_count <<
+            " time(s)." << std::endl;
 
         // if this prisoner has already flipped the switch up twice, they should just leave immediately
         if (this->flip_count >= this->target_count) {
@@ -154,14 +157,15 @@ void Setter::perform_task(bool* challenge_finished, SwitchRoom *switch_room, boo
 
         // check the state of the switch; if it's currently on, leave immediately
         switch_state current_state = switch_room->check_switch(this);
-        if (current_state == switch_state::on) {
+        if (current_state == switch_state::on)
             switch_room->exit(this, "leave without doing anything (because the switch is on)");
-        }
 
         // if the switch is currently off, turn it on
         else if (current_state == switch_state::off) {
             switch_room->flip_switch(this);
             this->flip_count++;
+            if (Parser::verbose_is_on()) std::cout << "  --> They have now flipped the switch " <<
+                this->flip_count << " time(s)." << std::endl;
             switch_room->exit(this);
         }
 
@@ -172,7 +176,11 @@ void Setter::perform_task(bool* challenge_finished, SwitchRoom *switch_room, boo
 
         // lock the switch room so that the next prisoner may unlock it
         switch_room->lock(this);
-        if (!threaded) break;
+        if (Parser::get_warden() != warden::os) break;
+        if (Parser::debug_is_on()) std::cout << "==" << tid << "== Sleeping for " << WAIT_TIME <<
+            " second(s)." << std::endl;
+        sleep(WAIT_TIME);
+        if (Parser::debug_is_on()) std::cout << "==" << tid << "== Woke up." << std::endl;
     }
 }
 
@@ -240,33 +248,37 @@ uint64_t Resetter::calculate_target_count() const
  * @param challenge_finished Starts false, and gets set to true when a prisoner thinks they have won.
  *  True breaks the loop, which would otherwise be infinite.
  * @param switch_room SwitchRoom object with which each prisoner interacts.
- * @param threaded Whether the method is being executed as a child process or part of the main thread.
  */
-void Resetter::perform_task(bool *challenge_finished, SwitchRoom *switch_room, bool threaded)
+void Resetter::perform_task(bool *challenge_finished, SwitchRoom *switch_room)
 {
+    std::thread::id tid = std::this_thread::get_id();
     while (!*challenge_finished) {
-        sleep(WAIT_TIME);   // helps keep same thread from getting access repeatedly
-
         // try to unlock the switch room
         switch_room->unlock(this);
         if (*challenge_finished) {  // it's possible this changed while this prisoner was waiting to enter
             switch_room->lock(this);
             continue;
         }
-        switch_room->enter(this);
         this->entered_count++;
+        switch_room->enter(this);
+        if (Parser::verbose_is_on()) std::cout << "  --> They have now entered " << this->entered_count <<
+            " time(s)." << std::endl;
 
         // check the state of the switch; if it's currently off, leave immediately
         switch_state current_state = switch_room->check_switch(this);
         if (current_state == switch_state::off) {
-            if (this->entered_count == 1) this->switch_start_state == switch_state::off;
+            if (this->entered_count == 1) this->switch_start_state = switch_state::off;
             switch_room->exit(this, "leave without doing anything (because the switch is off)");
+            if (Parser::verbose_is_on()) std::cout << "  --> They note that they only have to count to " <<
+                this->target_count - 1 << " now!" << std::endl;
         }
 
         // if the switch is currently on, turn it off
         else if (current_state == switch_state::on) {
             switch_room->flip_switch(this);
             this->flip_count++;
+            if (Parser::verbose_is_on()) std::cout << "  --> They have now flipped the switch " <<
+                this->flip_count << " time(s)." << std::endl;
             switch_room->exit(this);
         }
 
@@ -276,6 +288,10 @@ void Resetter::perform_task(bool *challenge_finished, SwitchRoom *switch_room, b
 
         // lock the switch room so that the next prisoner may unlock it
         switch_room->lock(this);
-        if (!threaded) break;
+        if (Parser::get_warden() != warden::os) break;
+        if (Parser::debug_is_on()) std::cout << "==" << tid << "== Sleeping for " << WAIT_TIME <<
+            " second(s)." << std::endl;
+        sleep(WAIT_TIME);
+        if (Parser::debug_is_on()) std::cout << "==" << tid << "== Woke up." << std::endl;
     }
 }

@@ -14,7 +14,6 @@ class Prisoner;
 class Setter;
 class Resetter;
 
-#include <stdint.h>
 #include "switch.h"
 
 #define SETTER_MAX_COUNT    2
@@ -44,11 +43,7 @@ class Prisoner
         void set_in_switch_room(bool in_room);
         bool has_been_in_switch_room();
 
-        virtual void perform_task(
-            bool* challenge_finished,
-            SwitchRoom* switch_room,
-            bool threaded = true
-        ) = 0;
+        virtual void perform_task(bool* challenge_finished, SwitchRoom* switch_room) = 0;
 };
 
 
@@ -67,7 +62,7 @@ class Setter : public Prisoner
 
         std::string to_string() const;
 
-        void perform_task(bool* challenge_finished, SwitchRoom* switch_room, bool threaded = true);
+        void perform_task(bool* challenge_finished, SwitchRoom* switch_room);
 };
 
 
@@ -88,7 +83,7 @@ class Resetter : public Prisoner
 
         std::string to_string() const;
 
-        void perform_task(bool* challenge_finished, SwitchRoom* switch_room, bool threaded = true);
+        void perform_task(bool* challenge_finished, SwitchRoom* switch_room);
 };
 
 #endif // PRISONER

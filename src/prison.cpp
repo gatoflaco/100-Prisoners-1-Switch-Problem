@@ -6,35 +6,45 @@ Isaac Jung
 |===========================================================================================================|
 */
 
-#include <iostream>
-#include <unistd.h>
 #include <algorithm>
-#include <thread>
+#include <iostream>
 #include <stdexcept>
+#include <thread>
+#include "parser.h"
 #include "prison.h"
 
 
 /**
  * @brief INITIALIZER - Initializes the prison.
  *
- * @param number_of_prisoners Number of prisoners to populate the prison.
- * @param initial_state Initial state of the prison's switch room's switch, on or off.
  * @throws std::logic_error When number of prisoners < 1. There needs to be at least 1 resetter.
  */
-void Prison::init(uint32_t number_of_prisoners, switch_state initial_state)
+void Prison::init()
 {
+    int32_t pid = Parser::get_pid();
+    if (Parser::debug_is_on()) std::cout << std::endl << "==" << pid << "== In Prison::init()." << std::endl;
     Prison::init_called = true;
-    
+
+    uint32_t number_of_prisoners = Parser::get_number_of_prisoners();
     if (number_of_prisoners < 1) throw std::logic_error("Need at least 2 prisoners");
+    Prison::mt = new std::mt19937(Parser::get_seed());
 
     Prison::total_number_of_prisoners = number_of_prisoners;
     Prison::prisoner_unique_index_len = Prison::calculate_prisoner_unique_index_len(number_of_prisoners);
 
     // generate number_of_prisoners Prisoner objects
+    if (Parser::debug_is_on()) std::cout << "==" << pid << "== Creating " << number_of_prisoners <<
+        " Prisoner objects (" << number_of_prisoners - 1 << " Setters, 1 Resetter)." << std::endl;
     for (uint32_t index = 1; index < number_of_prisoners; index++) {
         Prison::prisoners.push_back(new Setter(index));
     }
     Prison::prisoners.push_back(new Resetter(number_of_prisoners));
+
+    // initialize switch room
+    std::uniform_int_distribution<uint8_t> distribution(0, 1);
+    switch_state initial_state = distribution(*Prison::mt) == 0 ? switch_state::off : switch_state::on;
+    if (Parser::debug_is_on()) std::cout << "==" << pid << "== Creating switch room in initial position " <<
+        (initial_state == switch_state::on ? "on." : "off.") << std::endl;
     Prison::switch_room = new SwitchRoom(initial_state);
 }
 
@@ -45,11 +55,14 @@ void Prison::init(uint32_t number_of_prisoners, switch_state initial_state)
 void Prison::free_memory()
 {
     if (!Prison::init_called) throw std::logic_error("Prison::init() must be called first");
+    else if (Parser::debug_is_on())
+        std::cout << std::endl << "==" << Parser::get_pid() << "== In Prison::free_memory()." << std::endl;
 
     for (Prisoner* prisoner : Prison::prisoners) {
         delete prisoner;
     }
     delete Prison::switch_room;
+    delete Prison::mt;
 }
 
 /**
@@ -102,23 +115,29 @@ uint8_t Prison::prisoner_id_len()
  * join until one of the prisoners declares that the challenge is complete. At that point, this method will
  * check that all prisoners have actually in fact visited the room.
  * 
- * 
- * @param g Random engine, for example a std::mt19937 (Mersenne Twister engine).
- * @param threaded Whether the method should spawn prisoner threads or execute prisoner tasks one at a time.
  * @return Returns true when the prisoners succeed at the challenge, false if they fail.
  * @throws std::logic_error When init() hasn't been called first.
  */
-bool Prison::challenge(std::mt19937 g, bool threaded)
+bool Prison::challenge()
 {
     if (!Prison::init_called) throw std::logic_error("Prison::init() must be called first");
 
+    bool d = Parser::debug_is_on();
+    warden w = Parser::get_warden();
+
+    if (d) std::cout << "==" << Parser::get_pid() << "== In Prison::challenge()." << std::endl << std::endl;
+
     bool challenge_finished = false;
 
-    // shuffle for randomness
-    std::shuffle(Prison::prisoners.begin(), Prison::prisoners.end(), g);
+    // shuffle for randomness unless warden is seq or fast
+    if (w < warden::seq) std::shuffle(Prison::prisoners.begin(), Prison::prisoners.end(), *Prison::mt);
+
+    if (Parser::get_output_mode() != out_mode::silent)
+        std::cout << "The challenge is commencing now!" << std::endl;
+    auto start = std::chrono::high_resolution_clock::now();
 
     // start every prisoner on their task
-    if (threaded) {
+    if (w == warden::os) {
         std::vector<std::thread> threads;
         for (Prisoner* prisoner : Prison::prisoners) {
             threads.push_back(
@@ -126,29 +145,61 @@ bool Prison::challenge(std::mt19937 g, bool threaded)
                     &Prisoner::perform_task,
                     prisoner,
                     &challenge_finished,
-                    Prison::switch_room,
-                    true
+                    Prison::switch_room
                 )
             );
         }
         for (std::thread& thread : threads) {
             thread.join();  // only happens once a prisoner declares that the challenge is over
         }
-        
-    } else {
+    } else if (w == warden::pseudo) {
         std::uniform_int_distribution<uint32_t> dist(0, Prison::total_number_of_prisoners - 1);
         while (!challenge_finished) {
-            Prison::prisoners.at(dist(g))->perform_task(&challenge_finished, Prison::switch_room, false);
+            Prison::prisoners.at(dist(*Prison::mt))->perform_task(
+                &challenge_finished,
+                Prison::switch_room
+            );
+        }
+    } else if (w == warden::fixed || w == warden::seq) {
+        while (!challenge_finished) {
+            for (uint32_t idx = 0; idx < Prison::total_number_of_prisoners; idx++) {
+                Prison::prisoners.at(idx)->perform_task(
+                    &challenge_finished,
+                    Prison::switch_room
+                );
+                if (challenge_finished) break;
+            }
+        }
+    } else {    // w == warden::fast
+        while (!challenge_finished) {
+            for (uint32_t idx = 0; idx < Prison::total_number_of_prisoners - 1; idx++) {
+                Prison::prisoners.at(Prison::total_number_of_prisoners - 1)->perform_task(
+                    &challenge_finished,
+                    Prison::switch_room
+                );
+                if (challenge_finished) break;
+                Prison::prisoners.at(idx)->perform_task(
+                    &challenge_finished,
+                    Prison::switch_room
+                );
+                if (challenge_finished) break;
+            }
         }
     }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration = end - start;
+    if (Parser::get_output_mode() != out_mode::silent)
+        std::cout << std::endl << "The challenge ended in " << duration.count() << " seconds." << std::endl;
 
     // check if all prisoners visited the room
     for (Prisoner* prisoner : Prison::prisoners) {
         if (!prisoner->has_been_in_switch_room()) {
-            std::cout << "But the claim was wrong...." << std::endl;
+            if (Parser::get_output_mode() != out_mode::silent)
+                std::cout << "But the claim was wrong...." << std::endl;
             return false;
         }
     }
-    std::cout << "The claim was correct." << std::endl;
+    if (Parser::get_output_mode() != out_mode::silent) std::cout << "The claim was correct." << std::endl;
     return true;
 }

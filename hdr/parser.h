@@ -49,6 +49,7 @@ typedef enum {
 } out_mode;
 
 #include <string>
+#include <unistd.h>
 #include "prison.h"
 #include "switch.h"
 
@@ -58,6 +59,7 @@ class Parser
 {
     private:
         static inline bool parse_called = false;            // prevents calling other methods before parse()
+        static inline int32_t pid = getpid();                   // main thread's process ID
         static inline debug_mode d = debug_mode::d_off;         // debug mode, d_off by default
         static inline verb_mode v = verb_mode::v_off;           // verbose mode, v_off by default
         static inline out_mode o = out_mode::normal;            // output mode, normal by default
@@ -65,7 +67,8 @@ class Parser
         static inline switch_state i_s = switch_state::unknown; // initial switch state, unknown by default
         static inline warden w = warden::os;                    // warden type, os by default
         static inline strategy strat = strategy::proper;        // strategy to use, "proper" by default
-        static inline std::string seed = "";                    // user-given seed, empty string by default
+        static inline bool seed_provided = false;               // whether seed was given, false until found
+        static inline uint32_t seed = 0;                        // user-given seed, empty string by default
 
         static void handle_option(const std::string& arg);
         static void handle_flags(const std::string& arg);
@@ -74,6 +77,7 @@ class Parser
     public:
         static void parse(int32_t argc, char *argv[]);
 
+        static int32_t get_pid();
         static bool debug_is_on();
         static bool verbose_is_on();
         static out_mode get_output_mode();
@@ -81,7 +85,8 @@ class Parser
         static switch_state get_initial_switch_state();
         static warden get_warden();
         static strategy get_strategy();
-        static std::string get_seed();
+        static bool seed_is_from_user();
+        static uint32_t get_seed();
 };
 
 #endif // PARSER

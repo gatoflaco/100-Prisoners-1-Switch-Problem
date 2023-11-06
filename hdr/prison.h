@@ -46,9 +46,8 @@ typedef enum {
     improper    = 1,
 } strategy;
 
-#include <stdint.h>
-#include <vector>
 #include <random>
+#include <vector>
 #include "prisoner.h"
 #include "switch.h"
 
@@ -62,17 +61,18 @@ class Prison
         static inline uint8_t prisoner_unique_index_len;    // char buffer size needed for prisoner ids
         static inline std::vector<Prisoner*> prisoners;     // actual prisoners in the prison
         static inline SwitchRoom* switch_room = nullptr;    // room containing the switch
+        static inline std::mt19937* mt = nullptr;           // Mersenne Twister for pseudorandom behavior
 
         static uint8_t calculate_prisoner_unique_index_len(uint32_t number_of_prisoners);
     
     public:
-        static void init(uint32_t number_of_prisoners, switch_state initial_state);
+        static void init();
         static void free_memory();
 
         static uint32_t num_prisoners();
         static uint8_t prisoner_id_len();
 
-        static bool challenge(std::mt19937 g, bool threaded = true);
+        static bool challenge();
 };
 
 #endif // PRISON
