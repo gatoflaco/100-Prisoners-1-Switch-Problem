@@ -6,17 +6,14 @@ Isaac Jung
 |===========================================================================================================|
 */
 
-#pragma once
-#ifndef SWITCH
-#define SWITCH
+#ifndef SWITCH_H
+#define SWITCH_H
 
+#include <mutex>
+
+class Prisoner;     // comes from Prisoner.h, but must be forward declared to avoid circular includes
 class SwitchRoom;
 class Switch;
-
-// typedef representing whether the switch is flipped on or off
-// - unknown is only ever used when someone tries to inspect the state of the switch 
-// - off represents the RESET state
-// - on represents the SET state
 
 /**
  * @brief Whether the switch is flipped on or off
@@ -30,9 +27,6 @@ typedef enum {
     off     = 1,
     on      = 2
 } switch_state;
-
-#include <mutex>
-#include "prisoner.h"
 
 
 // class for the room containing the switch
@@ -69,4 +63,4 @@ class Switch
         void flip();
 };
 
-#endif // SWITCH
+#endif // SWITCH_H

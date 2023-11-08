@@ -6,10 +6,8 @@ Isaac Jung
 |===========================================================================================================|
 */
 
-#include <algorithm>
 #include <iostream>
-#include <sstream>
-#include <string>
+#include "global.h"
 #include "parser.h"
 
 /**
@@ -153,16 +151,6 @@ void Parser::handle_argument(const std::string& arg)
     } catch ( ... ) {
         std::cout << "NOTE: couldn't parse command line argument <" << arg << ">; ignored" << std::endl;
     }
-}
-
-/**
- * @brief GETTER - Interface for getting the process ID of the main thread.
- *
- * @return Returns an integer representing a process ID.
- */
-int32_t Parser::get_pid()
-{
-    return Parser::pid;
 }
 
 /**

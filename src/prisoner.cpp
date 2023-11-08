@@ -8,12 +8,12 @@ Isaac Jung
 
 #include <iomanip>
 #include <iostream>
-#include <sstream>
 #include <thread>
 #include <unistd.h>
+#include "global.h"
 #include "parser.h"
-#include "prisoner.h"
 #include "prison.h"
+#include "prisoner.h"
 
 
 /*============================================== Prisoner =================================================*/
@@ -79,8 +79,11 @@ bool Prisoner::has_been_in_switch_room()
  */
 void Prisoner::declare_completion(bool* challenge_finished)
 {
-    if (Parser::get_output_mode() != out_mode::silent)
+    if (Parser::get_output_mode() != out_mode::silent) {
+        Global::output_mutex.lock();
         std::cout << std::endl << this->str_rep << " declares that the challenge is complete!" << std::endl;
+        Global::output_mutex.unlock();
+    }
     *challenge_finished = true;
 }
 
@@ -142,13 +145,21 @@ void Setter::perform_task(bool* challenge_finished, SwitchRoom *switch_room)
         // try to unlock the switch room
         switch_room->unlock(this);
         if (*challenge_finished) {  // it's possible this changed while this prisoner was waiting to enter
+            if (Parser::verbose_is_on()) {
+                Global::output_mutex.lock();
+                std::cout << std::endl << "  --> They stop because the challenge is over." << std::endl;
+                Global::output_mutex.unlock();
+            }
             switch_room->lock(this);
             continue;
         }
         this->entered_count++;
         switch_room->enter(this);
-        if (Parser::verbose_is_on()) std::cout << "  --> They have now entered " << this->entered_count <<
-            " time(s)." << std::endl;
+        if (Parser::verbose_is_on()) {
+            Global::output_mutex.lock();
+            std::cout << "  --> They have now entered " << this->entered_count << " time(s)." << std::endl;
+            Global::output_mutex.unlock();
+        }
 
         // if this prisoner has already flipped the switch up twice, they should just leave immediately
         if (this->flip_count >= this->target_count) {
@@ -164,23 +175,33 @@ void Setter::perform_task(bool* challenge_finished, SwitchRoom *switch_room)
         else if (current_state == switch_state::off) {
             switch_room->flip_switch(this);
             this->flip_count++;
-            if (Parser::verbose_is_on()) std::cout << "  --> They have now flipped the switch " <<
-                this->flip_count << " time(s)." << std::endl;
+            if (Parser::verbose_is_on()) {
+                Global::output_mutex.lock();
+                std::cout << "  --> They have now flipped the switch " << this->flip_count << " time(s)." <<
+                    std::endl;
+                Global::output_mutex.unlock();
+            }
             switch_room->exit(this);
         }
 
-        /* intentionally logically incorrect, for testing that the prison can verify incorrectness
-        if (this->entered_count > 2 && this->flip_count >= this->target_count)
-            this->declare_completion(challenge_finished);
-        //*/
+        // allow setters to declare completion when strategy set to improper
+        if (Parser::get_strategy() == strategy::improper && this->entered_count > SETTER_MAX_COUNT
+                && this->flip_count >= this->target_count) this->declare_completion(challenge_finished);
 
         // lock the switch room so that the next prisoner may unlock it
         switch_room->lock(this);
         if (Parser::get_warden() != warden::os) break;
-        if (Parser::debug_is_on()) std::cout << "==" << tid << "== Sleeping for " << WAIT_TIME <<
-            " second(s)." << std::endl;
+        if (Parser::debug_is_on()) {
+            Global::output_mutex.lock();
+            std::cout << "==" << tid << "== Sleeping for " << WAIT_TIME << " second(s)." << std::endl;
+            Global::output_mutex.unlock();
+        }
         sleep(WAIT_TIME);
-        if (Parser::debug_is_on()) std::cout << "==" << tid << "== Woke up." << std::endl;
+        if (Parser::debug_is_on()) {
+            Global::output_mutex.lock();
+            std::cout << "==" << tid << "== Woke up." << std::endl;
+            Global::output_mutex.unlock();
+        }
     }
 }
 
@@ -229,12 +250,14 @@ std::string Resetter::to_string() const
  * @details This is a private method which should be called only in the member initializer list of the class
  * constructor, to set the const value of target_count.
  *
- * @param index unique number assigned to the prisoner for easier identification purposes.
  * @return Returns a string of the form "Prisoner #x (Resetter)", where x is their index buffered with 0s.
  */
 uint64_t Resetter::calculate_target_count() const
 {
-    return (Prison::num_prisoners() - 1) * SETTER_MAX_COUNT;
+    uint64_t ret = (Prison::num_prisoners() - 1) * SETTER_MAX_COUNT;
+    if (Parser::debug_is_on())
+        std::cout << "==" << Global::pid << "== Calculated Resetter target count as: " << ret << std::endl;
+    return ret;
 }
 
 /**
@@ -256,42 +279,66 @@ void Resetter::perform_task(bool *challenge_finished, SwitchRoom *switch_room)
         // try to unlock the switch room
         switch_room->unlock(this);
         if (*challenge_finished) {  // it's possible this changed while this prisoner was waiting to enter
+            if (Parser::verbose_is_on()) {
+                Global::output_mutex.lock();
+                std::cout << std::endl << "  --> They stop because the challenge is over." << std::endl;
+                Global::output_mutex.unlock();
+            }
             switch_room->lock(this);
             continue;
         }
         this->entered_count++;
         switch_room->enter(this);
-        if (Parser::verbose_is_on()) std::cout << "  --> They have now entered " << this->entered_count <<
-            " time(s)." << std::endl;
+        if (Parser::verbose_is_on()) {
+            Global::output_mutex.lock();
+            std::cout << "  --> They have now entered " << this->entered_count << " time(s)." << std::endl;
+            Global::output_mutex.unlock();
+        }
 
         // check the state of the switch; if it's currently off, leave immediately
         switch_state current_state = switch_room->check_switch(this);
         if (current_state == switch_state::off) {
             if (this->entered_count == 1) this->switch_start_state = switch_state::off;
             switch_room->exit(this, "leave without doing anything (because the switch is off)");
-            if (Parser::verbose_is_on()) std::cout << "  --> They note that they only have to count to " <<
-                this->target_count - 1 << " now!" << std::endl;
+            if (Parser::verbose_is_on()) {
+                Global::output_mutex.lock();
+                std::cout << "  --> They note that they only have to count to " << this->target_count - 1 <<
+                    " now!" << std::endl;
+                Global::output_mutex.unlock();
+            }
         }
 
         // if the switch is currently on, turn it off
         else if (current_state == switch_state::on) {
             switch_room->flip_switch(this);
             this->flip_count++;
-            if (Parser::verbose_is_on()) std::cout << "  --> They have now flipped the switch " <<
-                this->flip_count << " time(s)." << std::endl;
+            if (Parser::verbose_is_on()) {
+                Global::output_mutex.lock();
+                std::cout << "  --> They have now flipped the switch " << this->flip_count << " time(s)." <<
+                    std::endl;
+                Global::output_mutex.unlock();
+            }
             switch_room->exit(this);
         }
 
         // can declare challenge complete if they just counted the final setter
-        if (this->flip_count >= this->target_count - (this->switch_start_state == switch_state::off ? 1 : 0))
+        if (this->flip_count >= this->target_count - (
+                (this->switch_start_state == switch_state::off && this->target_count > 0) ? 1 : 0))
             this->declare_completion(challenge_finished);
 
         // lock the switch room so that the next prisoner may unlock it
         switch_room->lock(this);
         if (Parser::get_warden() != warden::os) break;
-        if (Parser::debug_is_on()) std::cout << "==" << tid << "== Sleeping for " << WAIT_TIME <<
-            " second(s)." << std::endl;
+        if (Parser::debug_is_on()) {
+            Global::output_mutex.lock();
+            std::cout << "==" << tid << "== Sleeping for " << WAIT_TIME << " second(s)." << std::endl;
+            Global::output_mutex.unlock();
+        }
         sleep(WAIT_TIME);
-        if (Parser::debug_is_on()) std::cout << "==" << tid << "== Woke up." << std::endl;
+        if (Parser::debug_is_on()) {
+            Global::output_mutex.lock();
+            std::cout << "==" << tid << "== Woke up." << std::endl;
+            Global::output_mutex.unlock();
+        }
     }
 }

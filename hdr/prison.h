@@ -12,9 +12,13 @@ Isaac Jung
 |===========================================================================================================|
 */
 
-#pragma once
-#ifndef PRISON
-#define PRISON
+#ifndef PRISON_H
+#define PRISON_H
+
+#include <random>
+#include <vector>
+#include "prisoner.h"
+#include "switch.h"
 
 class Prison;
 
@@ -46,13 +50,8 @@ typedef enum {
     improper    = 1,
 } strategy;
 
-#include <random>
-#include <vector>
-#include "prisoner.h"
-#include "switch.h"
 
-
-// represents elements of the prison; the "warden" is just the OS that decides when prisoners get to go in
+// represents elements of the prison
 class Prison
 {
     private:
@@ -75,4 +74,4 @@ class Prison
         static bool challenge();
 };
 
-#endif // PRISON
+#endif // PRISON_H

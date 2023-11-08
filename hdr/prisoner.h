@@ -6,18 +6,17 @@ Isaac Jung
 |===========================================================================================================|
 */
 
-#pragma once
-#ifndef PRISONER
-#define PRISONER
+#ifndef PRISONER_H
+#define PRISONER_H
+
+#define SETTER_MAX_COUNT    2
+#define WAIT_TIME           0.2
+
+#include "switch.h"
 
 class Prisoner;
 class Setter;
 class Resetter;
-
-#include "switch.h"
-
-#define SETTER_MAX_COUNT    2
-#define WAIT_TIME           0.2
 
 
 // base class for the two prisoner roles, setter and resetter
@@ -86,4 +85,4 @@ class Resetter : public Prisoner
         void perform_task(bool* challenge_finished, SwitchRoom* switch_room);
 };
 
-#endif // PRISONER
+#endif // PRISONER_H

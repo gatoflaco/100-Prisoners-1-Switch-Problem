@@ -8,6 +8,7 @@ Isaac Jung
 
 #include <iostream>
 #include <thread>
+#include "global.h"
 #include "parser.h"
 #include "switch.h"
 
@@ -45,17 +46,19 @@ SwitchRoom::~SwitchRoom()
  */
 void SwitchRoom::unlock(Prisoner* prisoner)
 {
-    static std::mutex output_mutex;
-    if (Parser::get_warden() == warden::os) output_mutex.lock();
+    Global::output_mutex.lock();
     if (Parser::debug_is_on())
         std::cout << "==" << std::this_thread::get_id() << "== In SwitchRoom::unlock()." << std::endl;
     if (Parser::verbose_is_on()) std::cout << std::endl << prisoner->to_string() <<
         " is trying to unlock the room." << std::endl;
-    if (Parser::get_warden() == warden::os) output_mutex.unlock();
+    Global::output_mutex.unlock();
     this->key.lock();
     this->current_occupant = prisoner;
-    if (Parser::verbose_is_on()) std::cout << std::endl << prisoner->to_string() <<
-        " has unlocked the room.";  // no std::endl here because it should happen in enter()
+    if (Parser::verbose_is_on()) {
+        Global::output_mutex.lock();
+        std::cout << std::endl << prisoner->to_string() << " has unlocked the room.";
+        Global::output_mutex.unlock();
+    }
 }
 
 /**
@@ -71,8 +74,11 @@ void SwitchRoom::enter(Prisoner* prisoner)
 {
     if (prisoner != this->current_occupant) return;
     prisoner->set_in_switch_room(true);
-    if (Parser::get_output_mode() != out_mode::silent) std::cout << std::endl << prisoner->to_string() <<
-        " has entered the room." << std::endl;
+    if (Parser::get_output_mode() != out_mode::silent) {
+        Global::output_mutex.lock();
+        std::cout << std::endl << prisoner->to_string() << " has entered the room." << std::endl;
+        Global::output_mutex.unlock();
+    }
 }
 
 /**
@@ -87,8 +93,11 @@ void SwitchRoom::enter(Prisoner* prisoner)
 switch_state SwitchRoom::check_switch(Prisoner* prisoner)
 {
     if (prisoner != this->current_occupant || !prisoner->is_in_switch_room()) return unknown;
-    if (Parser::verbose_is_on() && Parser::get_output_mode() == out_mode::normal)
+    if (Parser::verbose_is_on() && Parser::get_output_mode() == out_mode::normal) {
+        Global::output_mutex.lock();
         std::cout << "  --> They check the switch." << std::endl;
+        Global::output_mutex.unlock();
+    }
     return this->s->is_on() ? switch_state::on : switch_state::off;
 }
 
@@ -104,8 +113,12 @@ void SwitchRoom::flip_switch(Prisoner* prisoner)
 {
     if (prisoner != this->current_occupant || !prisoner->is_in_switch_room()) return;
     this->s->flip();
-    if (Parser::get_output_mode() == out_mode::normal) std::cout << "  --> They flip the switch to the " <<
-        (this->s->is_on() ? "on" : "off") << " state." << std::endl;
+    if (Parser::get_output_mode() == out_mode::normal) {
+        Global::output_mutex.lock();
+        std::cout << "  --> They flip the switch to the " << (this->s->is_on() ? "on" : "off") <<
+            " state." << std::endl;
+        Global::output_mutex.unlock();
+    }
 }
 
 /**
@@ -121,8 +134,11 @@ void SwitchRoom::flip_switch(Prisoner* prisoner)
 void SwitchRoom::exit(Prisoner* prisoner, std::string description)
 {
     if (prisoner != this->current_occupant || !prisoner->is_in_switch_room()) return;
-    if (Parser::get_output_mode() == out_mode::normal && !description.empty())
+    if (Parser::get_output_mode() == out_mode::normal && !description.empty()) {
+        Global::output_mutex.lock();
         std::cout << "  --> They " << description << "." << std::endl;
+        Global::output_mutex.unlock();
+    }
     prisoner->set_in_switch_room(false);
 }
 
@@ -139,7 +155,11 @@ void SwitchRoom::exit(Prisoner* prisoner, std::string description)
 void SwitchRoom::lock(Prisoner* prisoner)
 {
     if (prisoner != this->current_occupant) return;
-    if (Parser::verbose_is_on()) std::cout << "  --> They lock the room behind them." << std::endl;
+    if (Parser::verbose_is_on()) {
+        Global::output_mutex.lock();
+        std::cout << "  --> They lock the room behind them." << std::endl;
+        Global::output_mutex.unlock();
+    }
     this->current_occupant = nullptr;
     this->key.unlock();
 }

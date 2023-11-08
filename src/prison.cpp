@@ -8,11 +8,10 @@ Isaac Jung
 
 #include <algorithm>
 #include <iostream>
-#include <stdexcept>
 #include <thread>
+#include "global.h"
 #include "parser.h"
 #include "prison.h"
-
 
 /**
  * @brief INITIALIZER - Initializes the prison.
@@ -21,7 +20,7 @@ Isaac Jung
  */
 void Prison::init()
 {
-    int32_t pid = Parser::get_pid();
+    int32_t pid = Global::pid;
     if (Parser::debug_is_on()) std::cout << std::endl << "==" << pid << "== In Prison::init()." << std::endl;
     Prison::init_called = true;
 
@@ -56,7 +55,7 @@ void Prison::free_memory()
 {
     if (!Prison::init_called) throw std::logic_error("Prison::init() must be called first");
     else if (Parser::debug_is_on())
-        std::cout << std::endl << "==" << Parser::get_pid() << "== In Prison::free_memory()." << std::endl;
+        std::cout << std::endl << "==" << Global::pid << "== In Prison::free_memory()." << std::endl;
 
     for (Prisoner* prisoner : Prison::prisoners) {
         delete prisoner;
@@ -125,7 +124,7 @@ bool Prison::challenge()
     bool d = Parser::debug_is_on();
     warden w = Parser::get_warden();
 
-    if (d) std::cout << "==" << Parser::get_pid() << "== In Prison::challenge()." << std::endl << std::endl;
+    if (d) std::cout << "==" << Global::pid << "== In Prison::challenge()." << std::endl << std::endl;
 
     bool challenge_finished = false;
 

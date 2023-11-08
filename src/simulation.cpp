@@ -2,12 +2,28 @@
 Isaac Jung
 
 |===========================================================================================================|
-|   This file contains the entry point into the code.                                                       |
+|   This file contains the entry point into the code. Compile with the "make" command. After compiling, run |
+| ""./simulation --help" for a breakdown of program usage. In short, this program simulates a 100 prisoner  |
+| problem variant, in which the 100 prisoners pass the challenge if any one prisoner correctly declares     |
+| that all 100 of them have been in a particular room. However, aside from a strategy meeting prior to the  |
+| commencement of the challenge, they have no means of communicating with each other, and will not be given |
+| the opportunity to do so, beyond a single switch inside the room. Prisoners are taken inside this room 1  |
+| 1 at a time, in a random order, at random time intervals, yet all there is to do in the room is flip the  |
+| switch on or off. They do not know the initial state of the switch, so their challenge is to come up with |
+| a strategy that will allow them to make the claim with guaranteed success, with only the ability to flip  |
+| the switch for the next prisoner entering to see. The proper solution to this is given in the README. The |
+| real fun of this program, though, is in the parameters that can be altered. From changing the number of   |
+| prisoners to purposely sabotaging their strategy, there are a lot of interesting alterations to explore.  |
+| Perhaps most importantly, you can alter the method by which the prisoners' order of entering is decided.  |
+| Ordinarily left up to the OS (by having each prisoner spawn their own thread), you can use user-space     |
+| controlled randomness to simulate the threaded behavior, or get rid of the randomness to varying degrees. |
+| Try experimenting to see how changing the parameters allows them to succeed (or fail) faster/slower!      |
 |===========================================================================================================|
 */
 
 #include <cstring>
 #include <iostream>
+#include "global.h"
 #include "parser.h"
 #include "prison.h"
 
@@ -25,7 +41,7 @@ int32_t main(int32_t argc, char *argv[])
 {
     if (argc > 1 && std::strcmp(argv[1], "--help") == 0) return print_usage();
     Parser::parse(argc, argv);
-    int32_t pid = Parser::get_pid();
+    int32_t pid = Global::pid;
     bool debug_enabled = Parser::debug_is_on();
     if (debug_enabled) debug_print();
     
@@ -94,7 +110,7 @@ static int32_t print_usage()
  * @brief HELPER - Prints out flag and option states when debug mode is enabled.
  */
 static void debug_print() {
-    int32_t pid = Parser::get_pid();
+    int32_t pid = Global::pid;
     bool verbose_enabled = Parser::verbose_is_on();
     out_mode o = Parser::get_output_mode();
     switch_state i_s = Parser::get_initial_switch_state();
