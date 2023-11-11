@@ -23,6 +23,7 @@ Isaac Jung
 
 #include <cstring>
 #include <iostream>
+#include <sched.h>
 #include "global.h"
 #include "parser.h"
 #include "prison.h"
@@ -141,6 +142,25 @@ static void debug_print() {
     else if (w == warden::seq) std::cout << "==" << pid << "== Warden: sequential" << std::endl;
     else if (w == warden::fast) std::cout << "==" << pid << "== Warden: fast" << std::endl;
     else std::cout << "==" << pid << "== WARNING: WARDEN APPEARS INVALID." << std::endl;
+
+    if (w == warden::os) {
+        std::cout << "==" << pid << "==  - Scheduling Policy: ";
+        switch (sched_getscheduler(pid)) {
+            case SCHED_FIFO:
+                std::cout << "SCHED_FIFO (First In, First Out)";
+                break;
+            case SCHED_RR:
+                std::cout << "SCHED_RR (Round Robin)";
+                break;
+            case SCHED_OTHER:
+                std::cout << "SCHED_OTHER (Completely Fair Scheduler - CFS)";
+                break;
+            default:
+                std::cout << "Unknown";
+                break;
+        }
+        std::cout << std::endl;
+    }
 
     if (strat == strategy::proper) std::cout << "==" << pid << "== Strategy: proper" << std::endl;
     else if (strat == strategy::improper) std::cout << "==" << pid << "== Strategy: improper" << std::endl;
