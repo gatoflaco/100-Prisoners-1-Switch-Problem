@@ -3,9 +3,12 @@ Isaac Jung
 
 |===========================================================================================================|
 |   This header contains a class used for processing input. Should the input format change, this class can  |
-| be updated accordingly. The way this class is used is to have the main code instantiate a single Parser   |
-| object, whose constructor will parse command line arguments to determine options and states. This header  |
-| also contains enumeration typedefs used by other modules.                                                 |
+| be updated accordingly. The way this class is used is to have the main code call the public parse()       |
+| method. This will parse command line arguments separated by whitespace. The parse() method must be called |
+| before the getter methods can be called. Other modules can also include this header and call the getters  |
+| to inspect the program state based on the user-given arguments, but again, the parse() method must first  |
+| be called, exactly once in the beginning of the program. Another thing this header file contains is a     |
+| series of enums for very general program needs.                                                        |
 |===========================================================================================================|
 */
 
@@ -13,8 +16,7 @@ Isaac Jung
 #define PARSER_H
 
 #include <string>
-#include "prison.h"
-#include "switch.h"
+#include "enums.h"
 
 class Parser;
 
@@ -24,10 +26,10 @@ class Parser;
  * @param d_off Debug mode is off, resulting in normal output.
  * @param d_on Debug mode is on, resulting in data structure info and extra flow control logging in output.
  */
-typedef enum {
+enum debug_mode {
     d_off   = 0,
     d_on    = 1
-} debug_mode;
+};
 
 /**
  * @brief Whether verbose mode is set.
@@ -35,10 +37,10 @@ typedef enum {
  * @param v_off Verbose mode is off, resulting in less output.
  * @param v_on Verbose mode is on, resulting in more output.
  */
-typedef enum {
+enum verb_mode {
     v_off   = 0,
     v_on    = 1
-} verb_mode;
+};
 
 /**
  * @brief How much output should be printed.
@@ -47,11 +49,11 @@ typedef enum {
  * @param halfway Only mention prisoners entering, not what they do.
  * @param silent Print out only the final conclusion.
  */
-typedef enum {
+enum out_mode {
     normal  = 0,
     halfway = 1,
     silent  = 2
-} out_mode;
+};
 
 
 // parses command line input

@@ -2,7 +2,11 @@
 Isaac Jung
 
 |===========================================================================================================|
-|   This header contains the data structures for the switch room.                                           |
+|   This header contains the data structures for the switch room. The switch room consists of nothing more  |
+| than a single switch. Therefore, there are two classes defined in this file, one for the SwitchRoom, one  |
+| for the Switch, in which the SwitchRoom is in a "has a" relationship with the Switch (composition); that  |
+| is, in this program, a Switch instance should not be instantiated outside of a SwitchRoom instance, and   |
+| when the SwitchRoom is deleted, the Switch should be, too.                                                |
 |===========================================================================================================|
 */
 
@@ -10,32 +14,23 @@ Isaac Jung
 #define SWITCH_H
 
 #include <mutex>
+#include "enums.h"
 
 class Prisoner;     // comes from Prisoner.h, but must be forward declared to avoid circular includes
+
 class SwitchRoom;
 class Switch;
-
-/**
- * @brief Whether the switch is flipped on or off
- * 
- * @param unknown Special state that is only used when prisoners query the switch state when they shouldn't.
- * @param off Switch is flipped off; used to represent the RESET state that the resetter counts.
- * @param on Switch is flipped on; used to represent the SET state that the setters count.
- */
-typedef enum {
-    unknown = 0,
-    off     = 1,
-    on      = 2
-} switch_state;
 
 
 // class for the room containing the switch
 class SwitchRoom
 {
     private:
-        Switch* s;          // actual switch object
-        std::mutex key;     // to prevent prisoners from entering the room when another is already inside
+        Switch* s;                              // actual switch object
+        std::mutex key;                         // prevents entering the room when already occupied
         Prisoner* current_occupant = nullptr;   // prisoner currently inside
+        uint64_t entered_count = 0;             // total number of prisoners to enter the room
+        uint32_t flipped_count = 0;             // total number of flips of the switch
     
     public:
         SwitchRoom(switch_state initial_state = switch_state::off);
@@ -47,6 +42,8 @@ class SwitchRoom
         void flip_switch(Prisoner* prisoner);
         void exit(Prisoner* prisoner, std::string description = "");
         void lock(Prisoner *prisoner);
+        uint64_t get_entered_count();
+        uint32_t get_flipped_count();
 };
 
 

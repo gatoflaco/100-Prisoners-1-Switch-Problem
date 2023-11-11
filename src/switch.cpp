@@ -10,6 +10,7 @@ Isaac Jung
 #include <thread>
 #include "global.h"
 #include "parser.h"
+#include "prisoner.h"
 #include "switch.h"
 
 
@@ -74,6 +75,7 @@ void SwitchRoom::enter(Prisoner* prisoner)
 {
     if (prisoner != this->current_occupant) return;
     prisoner->set_in_switch_room(true);
+    this->entered_count++;
     if (Parser::get_output_mode() != out_mode::silent) {
         Global::output_mutex.lock();
         std::cout << std::endl << prisoner->to_string() << " has entered the room." << std::endl;
@@ -113,6 +115,7 @@ void SwitchRoom::flip_switch(Prisoner* prisoner)
 {
     if (prisoner != this->current_occupant || !prisoner->is_in_switch_room()) return;
     this->s->flip();
+    this->flipped_count++;
     if (Parser::get_output_mode() == out_mode::normal) {
         Global::output_mutex.lock();
         std::cout << "  --> They flip the switch to the " << (this->s->is_on() ? "on" : "off") <<
@@ -162,6 +165,26 @@ void SwitchRoom::lock(Prisoner* prisoner)
     }
     this->current_occupant = nullptr;
     this->key.unlock();
+}
+
+/**
+ * @brief GETTER - Interface for getting the total number of prisoners who have entered the room.
+ *
+ * @return Returns an integer greater than or equal to 0.
+ */
+uint64_t SwitchRoom::get_entered_count()
+{
+    return this->entered_count;
+}
+
+/**
+ * @brief GETTER - Interface for getting the total number of times that the switch was flipped.
+ *
+ * @return Returns an integer greater than or equal to 0.
+ */
+uint32_t SwitchRoom::get_flipped_count()
+{
+    return this->flipped_count;
 }
 
 

@@ -41,7 +41,7 @@ int32_t main(int32_t argc, char *argv[])
 {
     if (argc > 1 && std::strcmp(argv[1], "--help") == 0) return print_usage();
     Parser::parse(argc, argv);
-    int32_t pid = Global::pid;
+    int32_t pid = Global::PID;
     bool debug_enabled = Parser::debug_is_on();
     if (debug_enabled) debug_print();
     
@@ -79,8 +79,8 @@ static int32_t print_usage()
     std::cout << "\t\t--> equivalent options are --initial, --init, and --i" << std::endl;
     std::cout << "\t\t--> valid values of <state> are:"<< std::endl;
     std::cout << "\t\t\t1. unknown : switch starts in random position (default)" << std::endl;
-    std::cout << "\t\t\t2. on/1/up : switch starts in on position" << std::endl;
-    std::cout << "\t\t\t3. off/0/down : switch starts in off position" << std::endl;
+    std::cout << "\t\t\t2. on/1/up/set : switch starts in on position" << std::endl;
+    std::cout << "\t\t\t3. off/0/down/reset : switch starts in off position" << std::endl;
     std::cout << "\t--warden=<type> : what plays the role of warden, OS by default" << std::endl;
     std::cout << "\t\t--> equivalent options are --ward and --w" << std::endl;
     std::cout << "\t\t--> valid values of <type> are:" << std::endl;
@@ -92,8 +92,8 @@ static int32_t print_usage()
     std::cout << "\t--strategy=<mode> : prisoner strategy, guaranteed success by default" << std::endl;
     std::cout << "\t\t--> equivalent options are --strat and --st" << std::endl;
     std::cout << "\t\t--> valid values of <mode> are:" << std::endl;
-    std::cout << "\t\t\t1. proper : resetter declares finish, only when certain (default)" << std::endl;
-    std::cout << "\t\t\t2. improper : setters can declare finish too early" << std::endl;
+    std::cout << "\t\t\t1. proper/p : resetter declares finish, only when certain (default)" << std::endl;
+    std::cout << "\t\t\t2. improper/i : setters can declare finish too early" << std::endl;
     std::cout << "\t--seed=<value> : seed to use, random by default" << std::endl;
     std::cout << "\t\t--> equivalent option is --se" << std::endl;
     std::cout << "\t\t--> <value> must be parsable as an unsigned 32-bit integer" << std::endl;
@@ -110,7 +110,7 @@ static int32_t print_usage()
  * @brief HELPER - Prints out flag and option states when debug mode is enabled.
  */
 static void debug_print() {
-    int32_t pid = Global::pid;
+    int32_t pid = Global::PID;
     bool verbose_enabled = Parser::verbose_is_on();
     out_mode o = Parser::get_output_mode();
     switch_state i_s = Parser::get_initial_switch_state();

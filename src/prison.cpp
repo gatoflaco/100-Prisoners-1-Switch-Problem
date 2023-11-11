@@ -20,7 +20,7 @@ Isaac Jung
  */
 void Prison::init()
 {
-    int32_t pid = Global::pid;
+    int32_t pid = Global::PID;
     if (Parser::debug_is_on()) std::cout << std::endl << "==" << pid << "== In Prison::init()." << std::endl;
     Prison::init_called = true;
 
@@ -40,8 +40,11 @@ void Prison::init()
     Prison::prisoners.push_back(new Resetter(number_of_prisoners));
 
     // initialize switch room
-    std::uniform_int_distribution<uint8_t> distribution(0, 1);
-    switch_state initial_state = distribution(*Prison::mt) == 0 ? switch_state::off : switch_state::on;
+    switch_state initial_state = Parser::get_initial_switch_state();
+    if (initial_state == switch_state::unknown) {
+        std::uniform_int_distribution<uint8_t> distribution(0, 1);
+        initial_state = distribution(*Prison::mt) == 0 ? switch_state::off : switch_state::on;
+    }
     if (Parser::debug_is_on()) std::cout << "==" << pid << "== Creating switch room in initial position " <<
         (initial_state == switch_state::on ? "on." : "off.") << std::endl;
     Prison::switch_room = new SwitchRoom(initial_state);
@@ -55,7 +58,7 @@ void Prison::free_memory()
 {
     if (!Prison::init_called) throw std::logic_error("Prison::init() must be called first");
     else if (Parser::debug_is_on())
-        std::cout << std::endl << "==" << Global::pid << "== In Prison::free_memory()." << std::endl;
+        std::cout << std::endl << "==" << Global::PID << "== In Prison::free_memory()." << std::endl;
 
     for (Prisoner* prisoner : Prison::prisoners) {
         delete prisoner;
@@ -124,7 +127,7 @@ bool Prison::challenge()
     bool d = Parser::debug_is_on();
     warden w = Parser::get_warden();
 
-    if (d) std::cout << "==" << Global::pid << "== In Prison::challenge()." << std::endl << std::endl;
+    if (d) std::cout << "==" << Global::PID << "== In Prison::challenge()." << std::endl << std::endl;
 
     bool challenge_finished = false;
 
@@ -186,10 +189,16 @@ bool Prison::challenge()
         }
     }
 
+    // stop timer and output miscellaneous statistics
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
-    if (Parser::get_output_mode() != out_mode::silent)
+    if (Parser::get_output_mode() != out_mode::silent) {
         std::cout << std::endl << "The challenge ended in " << duration.count() << " seconds." << std::endl;
+        std::cout << "The switch room was entered " << Prison::switch_room->get_entered_count() <<
+            " times total." << std::endl;
+        std::cout << "The switch was flipped " << Prison::switch_room->get_flipped_count() <<
+            " times total." << std::endl;
+    }
 
     // check if all prisoners visited the room
     for (Prisoner* prisoner : Prison::prisoners) {

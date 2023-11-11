@@ -12,12 +12,17 @@ Isaac Jung
 #include <mutex>
 #include <unistd.h>
 
+class Global;
 
+
+// class for holding global variables and constants.
 class Global
 {
     public:
-        static std::mutex output_mutex;       // used for threaded console printing
-        static inline int32_t pid = getpid();   // main thread's process ID
+        static std::mutex output_mutex;                     // used for threaded console printing
+        static inline int32_t PID = getpid();               // main thread's process ID
+        const static inline uint8_t SETTER_MAX_COUNT = 2;   // count that setters want to set the switch
+        const static inline float WAIT_TIME = 0.2;          // for avoiding repeated thread preemption
 };
 
 #endif // GLOBAL_H

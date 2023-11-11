@@ -4,11 +4,11 @@ Isaac Jung
 |===========================================================================================================|
 |   This header contains the data structures for the prison. The role of the warden is to pick random       |
 | prisoners at random times to go into the switch room. In practice, this describes the role of the OS, and |
-| so there is no unique class or otherwise for the warden. However, the prison does consist of a bunch of   |
-| prisoners, as well as the switch room. The class is static, as there should not be more than one instance |
-| of the prison. The main program should initialize the prisoners with init_prisoners(), then it should     |
-| initialize the switch room with init_switch_room(), and then it may call challenge() to begin the main    |
-| loop. The free_memory() method should be called when the challenge() method is finished for a clean exit. |
+| so there is no unique class for the warden, only an enum (found in enums.h). However, the prison does     |
+| consist of a bunch of prisoners, as well as the switch room. The class is static, as there should not be  |
+| more than one instance of the prison. The main program should first initialize teverything with init(),   |
+| and then it may call the challenge() method to begin the main loop. The free_memory() method should be    |
+| called after challenge() for a clean exit.                                                                |
 |===========================================================================================================|
 */
 
@@ -21,34 +21,6 @@ Isaac Jung
 #include "switch.h"
 
 class Prison;
-
-/**
- * @brief What will take on the role of the warden.
- * 
- * @param os The operating system will decide; this is the default option which uses threads for prisoners.
- * @param pseudo The prisoners' order is decided by a random seed, but the program will be single threaded.
- * @param fixed A random permutation is decided in the beginning; the prisoners will follow that order.
- * @param seq Like fixed, but the order is specifically from 1 to 100.
- * @param fast Like sequential, but the resetter will enter any time the switch is in the on position.
- */
-typedef enum {
-    os      = 0,
-    pseudo  = 1,
-    fixed   = 2,
-    seq     = 3,
-    fast    = 4
-} warden;
-
-/**
- * @brief Version of strategy to use.
- * 
- * @param proper Only the resetter will declare completion, only when certain of guaranteed success.
- * @param improper The setters may declare completion too early, but may still succeed by luck.
- */
-typedef enum {
-    proper      = 0,
-    improper    = 1,
-} strategy;
 
 
 // represents elements of the prison

@@ -2,16 +2,20 @@
 Isaac Jung
 
 |===========================================================================================================|
-|   This header contains the data structures for prisoners.                                                 |
+|   This header contains the data structures for prisoners. There will be two roles that prisoners can take |
+| on during the challenge; they will either be one of a group of "setters" who try to flip the switch to    |
+| its "set" state (in this case, the on state), or they will be the single "resetter" who tries to flip the |
+| switch to its "reset" state (in this case, the off state). Therefore, the design of this header file has  |
+| a parent class and two child classes: the parent class is the abstract Prisoner class, which contains a   |
+| lot of the data and method members shared in common between the two roles, while the Setter and Restter   |
+| are child classes which inherit from Prisoner.                                                            |
 |===========================================================================================================|
 */
 
 #ifndef PRISONER_H
 #define PRISONER_H
 
-#define SETTER_MAX_COUNT    2
-#define WAIT_TIME           0.2
-
+#include "global.h"
 #include "switch.h"
 
 class Prisoner;
@@ -50,7 +54,7 @@ class Prisoner
 class Setter : public Prisoner
 {
     private:
-        static const uint8_t target_count = SETTER_MAX_COUNT;   // number of times setter wants to set
+        static const uint8_t target_count = Global::SETTER_MAX_COUNT;   // count setter wants to set
         const std::string str_rep;                              // memoized to_string_internal
 
         std::string to_string_internal(uint32_t index) const;
@@ -70,7 +74,7 @@ class Resetter : public Prisoner
 {
     private:
         switch_state switch_start_state = unknown;  // can be updated to off in a specific case
-        const uint64_t target_count;                // number of times resetter wants to reset
+        const uint64_t target_count;                // count resetter wants to reset
         const std::string str_rep;                  // memoized to_string_internal
 
         std::string to_string_internal(uint32_t index) const;

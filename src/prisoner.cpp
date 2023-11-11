@@ -185,18 +185,18 @@ void Setter::perform_task(bool* challenge_finished, SwitchRoom *switch_room)
         }
 
         // allow setters to declare completion when strategy set to improper
-        if (Parser::get_strategy() == strategy::improper && this->entered_count > SETTER_MAX_COUNT
-                && this->flip_count >= this->target_count) this->declare_completion(challenge_finished);
+        if (Parser::get_strategy() == strategy::improper && this->entered_count > Setter::target_count
+                && this->flip_count >= Setter::target_count) this->declare_completion(challenge_finished);
 
         // lock the switch room so that the next prisoner may unlock it
         switch_room->lock(this);
         if (Parser::get_warden() != warden::os) break;
         if (Parser::debug_is_on()) {
             Global::output_mutex.lock();
-            std::cout << "==" << tid << "== Sleeping for " << WAIT_TIME << " second(s)." << std::endl;
+            std::cout << "==" << tid << "== Sleeping for " << Global::WAIT_TIME << " seconds." << std::endl;
             Global::output_mutex.unlock();
         }
-        sleep(WAIT_TIME);
+        sleep(Global::WAIT_TIME);
         if (Parser::debug_is_on()) {
             Global::output_mutex.lock();
             std::cout << "==" << tid << "== Woke up." << std::endl;
@@ -254,9 +254,9 @@ std::string Resetter::to_string() const
  */
 uint64_t Resetter::calculate_target_count() const
 {
-    uint64_t ret = (Prison::num_prisoners() - 1) * SETTER_MAX_COUNT;
+    uint64_t ret = (Prison::num_prisoners() - (Global::SETTER_MAX_COUNT - 1)) * Global::SETTER_MAX_COUNT;
     if (Parser::debug_is_on())
-        std::cout << "==" << Global::pid << "== Calculated Resetter target count as: " << ret << std::endl;
+        std::cout << "==" << Global::PID << "== Calculated Resetter target count as: " << ret << std::endl;
     return ret;
 }
 
@@ -331,10 +331,10 @@ void Resetter::perform_task(bool *challenge_finished, SwitchRoom *switch_room)
         if (Parser::get_warden() != warden::os) break;
         if (Parser::debug_is_on()) {
             Global::output_mutex.lock();
-            std::cout << "==" << tid << "== Sleeping for " << WAIT_TIME << " second(s)." << std::endl;
+            std::cout << "==" << tid << "== Sleeping for " << Global::WAIT_TIME << " seconds." << std::endl;
             Global::output_mutex.unlock();
         }
-        sleep(WAIT_TIME);
+        sleep(Global::WAIT_TIME);
         if (Parser::debug_is_on()) {
             Global::output_mutex.lock();
             std::cout << "==" << tid << "== Woke up." << std::endl;

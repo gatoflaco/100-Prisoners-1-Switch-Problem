@@ -7,6 +7,7 @@ Isaac Jung
 */
 
 #include <iostream>
+#include <random>
 #include "global.h"
 #include "parser.h"
 
@@ -69,8 +70,9 @@ void Parser::handle_option(const std::string& arg)
     std::string option = arg.substr(2, pos - 2);    // extract the option
     std::string value = arg.substr(pos + 1);        // extract the value
     if (option == "i" || option == "init" || option == "initial" || option == "initial_state") {
-        if (value == "on" || value == "1" || value == "up") Parser::i_s = switch_state::on;
-        else if (value == "off" || value == "0" || value == "down") Parser::i_s = switch_state::off;
+        if (value == "on" || value == "1" || value == "up" || value == "set") Parser::i_s = switch_state::on;
+        else if (value == "off" || value == "0" || value == "down" || value == "reset")
+            Parser::i_s = switch_state::off;
         else if (value != "unknown") std::cout << "NOTE: \'" << value <<
             "\' is not a valid initial switch state; ignored" << std::endl;
     } else if (option == "w" || option == "ward" || option == "warden") {
